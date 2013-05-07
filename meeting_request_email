@@ -1,0 +1,331 @@
+<?php
+$username = "developers";
+$password = "developers@2012";
+$database = "gtdcorg_wrd1>vs2012";
+mysql_connect(localhost, $username, $password);
+@mysql_select_db($database) or die("Unable to select database");
+$query_to = mysql_query("select * from evs2012 where listy = 'Yes'");
+while ($row = mysql_fetch_array($query_to)) {
+    $to_lists[$row['email']] = $row['company'] . " - " . $row['fname'] . " " . $row['lname'];
+}
+session_start();
+$confirmation = '';
+if (isset($_POST['appointment_request'])) {
+    $to = $_POST['to'];
+    $to_name = $to_lists[$to];
+    $from = $_POST['from'];
+    $duration = $_POST['duration'];
+    $duration_unit = $_POST['duration_unit'];
+    if ($duration_unit == 2) {
+        $meeting_duration = $duration * 3600;
+    } else {
+        $meeting_duration = $duration * 60;
+    }
+    $subject = 'GTDC U.S. Vendor Summit Appointment Request';
+    $message_description = $_POST['body'];
+    $message_description = str_replace("\r\n", "\\n", $message_description);
+    $headers = 'From: ' . $from . "\r\n" .
+            'Reply-To: ' . $from . "\r\n";
+    $date = $_POST['date'];
+    $time = $_POST['time'];
+    $location = $_POST['place'];
+    $d = date('Y-m-d H:i:s', strtotime($date . ' ' . $time));
+    $meeting_date = $d;
+    date_default_timezone_set('Asia/Dhaka');
+    $meetingstamp = strtotime($meeting_date . "Asia/Dhaka");
+    $dtstart = gmdate("Ymd\THis\Z", $meetingstamp);
+    $dtend = gmdate("Ymd\THis\Z", $meetingstamp + $meeting_duration);
+    $todaystamp = gmdate("Ymd\THis\Z");
+    $cal_uid = date('Ymd') . 'T' . date('His') . "-" . rand();
+    $headers .= "MIME-Version: 1.0\n";
+    $headers .= "Content-Type: text/calendar; method=REQUEST;\n";
+    $headers .= '        charset="UTF-8"';
+    $headers .= "\n";
+    $headers .= "Content-Transfer-Encoding: 7bit";
+    $message = "BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:$dtstart
+DTEND:$dtend
+DTSTAMP:$todaystamp
+ORGANIZER;CN= :mailto:$from
+UID:$cal_uid
+ATTENDEE;PARTSTAT=NEEDS-ACTION;RSVP= TRUE;CN=Sample:mailto:$to
+DESCRIPTION:" . $message_description . "
+LOCATION:$location
+TRANSP:OPAQUE
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Meeting Request
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR";
+
+    if (!empty($_REQUEST['captcha'])) {
+        if (empty($_SESSION['captcha']) || trim(strtolower($_REQUEST['captcha'])) != $_SESSION['captcha']) {
+            $error = 'Please enter valid text';
+        } else {
+            if (empty($_REQUEST['to'])) {
+                $error = 'Please fill up the required field';
+            } else if (empty($_POST['from'])) {
+                $error = 'Please fill up the required field';
+            } else if (false && empty($_POST['place'])) {
+                $error = 'Please fill up the required field';
+            } else if (empty($_POST['duration'])) {
+                $error = 'Please fill up the required field';
+            } else if (empty($_POST['date'])) {
+                $error = 'Please fill up the required field';
+            } else if (empty($_POST['time'])) {
+                $error = 'Please fill up the required field';
+            } else {
+                if (mail($to, $subject, $message, $headers)) {
+
+                    $confirmation = 'Your Request Has Been Sent To' . " " . $to_name;
+                }
+            }
+        }
+        unset($_SESSION['captcha']);
+    } else {
+        $error = 'Please fill up the captcha field';
+    }
+}
+?>
+<style type="text/css">
+    body { font-family: Arial;}
+    .subtitle {
+        font-size: 16px;
+        color: #cc3333;
+        font-weight: bold;
+    }
+    #addtocalendar {
+        font-size: 10px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #cc3333;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: center;
+    }
+    #addtocalendar {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10px;
+        font-weight: bold;
+        color: #cc3333;
+        text-decoration: none;
+    }
+    #Besure {
+        font-weight: bold;
+    }
+    #reg_info { margin:25px 25px 0px 25px; }
+    .form_line { clear: both; }
+    .form-left {width:25%; font-size: 12px; font-weight:bold; height:32px; float:left; text-align:right; }
+    .form-right { width:370px; height:32px; float:right; }
+    #reg_info .form-right input, select { width:370px; }
+    #reg_info .form-right input {width: 364px;}
+    #reg_info textarea { width:364px; margin-left:0; }
+    .required { color:red; font-weight:bold; }
+    #reg_info h3 { border-bottom:solid #ccc 3px; padding-bottom:5px; }
+    #regerror { background-color:red; display:none; color:white; text-align:center; font-weight:bold; padding:5px; margin-bottom:10px; }
+    #subject { border: 0 none; }
+
+    .early_box {
+        width:100px;
+        float:right;
+        padding:10px;
+        margin:0px 10px 10px 10px;
+        background-color:#CC3333;
+        position:relative;
+        top:-18px;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+        border:white solid 2px;
+        box-shadow:0px 0px 10px rgba(0,0,0,.5);
+        -webkit-box-shadow:0px 0px 10px rgba(0,0,0,.5);
+        -moz-box-shadow: 0px 0px 10px rgba(0,0,0,.5);
+    }
+
+    .early_box p {
+        text-align:center;
+        padding:0px;
+        margin:0px;
+        color:white;
+    }
+
+    .early_box .counter { font-size:35px; line-height:35px; padding:0px; margin:0px; font-weight:bold; }
+
+    .redhigh { border:solid red 1px; }
+
+    .error { background-color:red; color:white; text-align:center; font-weight:bold; padding:5px; margin-bottom:10px; }
+    .form-right-duration { float:right; width: 370px;}
+    #duration { width:120px; float: left;}
+    .form-right-duration select {width:230px; float: right;}
+    .schedule_date {float: left; width: 283px;}
+    .schedule_time { float: right; width: 220px;}
+    .schedule_date .form-left {width:48%; }
+    .schedule_date select, .schedule_time input { width:174px;}
+    .schedule_date .form-right, .schedule_time .form-right { width: 143px;}
+    #reg_info .schedule_date .form-right select, #reg_info .schedule_time .form-right input {
+        width: 144px;
+    }
+    .schedule_time .form-right input { margin-left: -7px;}
+    #people_label{
+        height: 66px;
+        width: 128px;
+    }
+    #people_input{
+        padding-top:46px;
+    }
+    #from_input{
+        padding-top:14px;
+    }
+</style>
+<script src="js/jquery-1.8.3.js"></script>
+<script src="js/jquery-ui-1.9.2.custom.js"></script>
+<script src="js/jquery-ui-timepicker-addon.js"></script>
+<link rel="stylesheet" href="js/jquery-ui-1.9.2.custom.css" />
+<link rel="stylesheet" href="js/jquery-ui-timepicker-addon.css" />
+<script type="text/javascript">
+    jQuery(document).ready(function(){
+        jQuery('.email_control').click(function(){
+            if(this.value=='Yes') jQuery('#email-one-on-one').css('display','inline');
+            else if(this.value=='No') jQuery('#email-one-on-one').css('display','none');
+        });
+        jQuery('#subject').focus(function(){ jQuery(this).blur();  });
+		
+    })
+</script>
+<script type="text/javascript">
+    jQuery(document).ready(function(){
+        $('#time').timepicker({
+            timeFormat: "hh:mm:ss tt"
+        }
+    );
+    });
+</script>
+<table cellpadding="0" cellspacing="0" border="0">
+    <tr>
+        <td><img src="http://www.gtdc.org/images/2012_USVS_RegistrationForm_Header.jpg" width="560" height="210" />
+
+            <h2>2013 GTDC European Vendor Summit Appointment Request</h2>
+            <h3><p style="color:#3ACA27"><?php echo $confirmation ?></p></h3>
+
+            <form id="reg_info" method="post" action="#" onsubmit="return validateAppointmentForm(this)" >
+                <h3>Appointment Request Email ( <span class="required">*</span> notes required field)</h3>
+
+                <div id="regerror"></div>
+                <div class="form_line">
+                    <?php if (!empty($error)) echo '<div class="error">' . $error . '</div>'; ?>
+                </div>
+                <div class="form_line">
+                    <div class="form-left">To: <span class="required">*</span></div>
+                    <div class="form-right">
+                        <select id="to" name="to">
+                            <option value="">Select one</option>
+                            <?php
+                            foreach ($to_lists as $key => $value):
+                                ?>
+                                <option value="<?php echo $key; ?>"><?php echo $value; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left" id="from_label">From (please list your email address): <span class="required">*</span></div>
+                    <div class="form-right" id="from_input"><input name="from" id="from" value="" /></div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left">Subject: </div>
+                    <div class="form-right"><input name="subject" readonly="readonly" id="subject" value="GTDC European Vendor Summit Meeting Request" /></div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left">Your Company: </div>
+                    <div class="form-right"><input name="your_company" id="your_company" value="" /></div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left">Your Title: </div>
+                    <div class="form-right"><input name="your_title" id="your_title" value="" /></div>
+                </div>
+                <div class="form_line">
+                    <div class="schedule_date" style="width:328px;">
+                        <div class="form-left" style="width:42%;">Meeting Request Date: <span class="required">*</span></div>
+                        <div class="form-right" style="width:188px;">
+                            <select id="date" name="date" style="width:189px;">
+                                <option value="">Select one</option>
+                                <option value="2013-06-12">Wednesday- June 12, 2013 </option>
+                                <option value="2013-06-13">Thursday- June 13, 2013</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="schedule_time" style="width:175px;">
+                        <div class="form-left" style="width:31%;">Time: <span class="required">*</span></div>
+                        <div class="form-right" style="width:99px;"><input name="time" id="time" style="width:99px;" /></div>
+                    </div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left">Duration: <span class="required">*</span></div>
+                    <div class="form-right-duration">
+                        <input name="duration" id="duration" value="" />
+                        <select id="duration_unit" name="duration_unit">
+                            <option value="">Select one</option>
+                            <option value="1">Min</option>
+                            <option value="2">Hour</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left">Meeting Location: </div>
+                    <div class="form-right"><input name="place" id="place" value="" /></div>
+                </div>
+                <div class="form_line">
+                    <div class="form-left" id="people_label">Number of people from your Company that will attend the meeting: </div>
+                    <div class="form-right" id="people_input"><input name="people" id="people" value="" /></div>
+                </div>
+
+                <?php
+                $body = <<<BODY
+I am interested in setting up a meeting with you at the upcoming GTDC U.S. Vendor Summit.
+Please see my information below:
+Name:
+Title:
+Company:
+Email:
+Phone:
+Available Days/Times:
+BODY;
+                ?>					
+
+                <div class="form_line">
+                    <div class="form-left">Additional Notes/Comments </div>
+                    <div class="form-right"><textarea id="body" rows="10" name="body"><?php echo ' ' ?></textarea></div>
+                </div>
+                <div class="form_line" style="margin-bottom:260px;">&nbsp;</div>
+                <div class="form_line">
+                    <div class="form-left">&nbsp;</div>
+                    <div class="form-right">
+                        <div>
+                            <p style="padding: 0;">Type the characters you see in the picture below.</p><br />
+                            <img src="includes/captcha.php" id="captcha" /><br />
+                            <a href="javascript:void();" onclick="
+                                document.getElementById('captcha').src='includes/captcha.php?'+Math.random();
+                                document.getElementById('captcha-form').focus();"
+                               id="change-image">Not readable? Change text.</a><br />
+                        </div>
+                        <div style="margin-top: 5px; "><input type="text" name="captcha" id="captcha-form" /></div>
+                    </div>
+                </div>
+                <div class="form_line" style="margin-bottom:200px;">&nbsp;</div>
+                <div class="form_line">
+                    <div style="text-align:center;"><input style="width:90px;" type="reset" value="Reset"/>&nbsp;&nbsp;<input style="width:180px;" type="submit" name="appointment_request" value="Send Request"/></div>
+                </div>
+
+                <div class="form_line">&nbsp;</div>
+            </form></td>
+    <tr>
+        <td height="493" valign="top" style="padding-left:10px; padding-right:10px; text-decoration: none;">
+            <h1>&nbsp;</h1></td>
+    </tr>
+    <?php mysql_close($con); ?>
+</table>
